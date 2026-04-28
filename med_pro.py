@@ -1,9 +1,9 @@
 import google.generativeai as genai
 from flask import Flask, request, jsonify, render_template_string
 
-# 1. AI sozlamalari
+# AI sozlamalari - Yangilangan versiya
 genai.configure(api_key="AIzaSyCe-WC2_SuzsBQchcRg8a-uT52rfHdMyj0")
-model = genai.GenerativeModel('gemini-1.5-flash')
+model = genai.GenerativeModel(model_name='gemini-1.5-flash')
 
 app = Flask(__name__)
 
