@@ -1,12 +1,12 @@
 import google.generativeai as genai
 from flask import Flask, request, jsonify, render_template_string
 
-# AI sozlamalari - Yangilangan versiya
+# 1. AI sozlamalari (Eng barqaror versiya)
 genai.configure(api_key="AIzaSyCe-WC2_SuzsBQchcRg8a-uT52rfHdMyj0")
-model = genai.GenerativeModel('gemini-pro')
-app = Flask(__name__)
+model = genai.GenerativeModel('gemini-pro') # 'gemini-1.5-flash' o'rniga 'gemini-pro' ishlatamiz
 
-# 2. Ilovaning ko'rinishi (Dizayn)
+app = Flask(name)
+
 HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="uz">
@@ -14,75 +14,81 @@ HTML_TEMPLATE = """
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MedAssist Pro</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { background: #eef2f3; padding: 20px; font-family: 'Segoe UI', sans-serif; }
-        .card { max-width: 500px; margin: auto; border-radius: 20px; border: none; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
-        .header { background: #1a73e8; color: white; padding: 25px; text-align: center; border-radius: 20px 20px 0 0; }
-        .btn-primary { background: #1a73e8; border: none; padding: 12px; border-radius: 10px; font-weight: bold; }
-        #javob { background: #fff; border-left: 5px solid #1a73e8; padding: 15px; margin-top: 20px; border-radius: 8px; font-size: 15px; display: none; }
+        body { background-color: #f0f4f8; }
+        .card { background: white; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
     </style>
 </head>
-<body>
-<div class="card">
-    <div class="header"><h3>💊 MedAssist Pro</h3></div>
-    <div class="card-body p-4">
-        <div class="mb-3">
-            <label class="form-label fw-bold">Dori nomi:</label>
-            <input type="text" id="nom" class="form-control" placeholder="Masalan: Aspirin">
+<body class="p-4 md:p-10">
+    <div class="max-w-md mx-auto card overflow-hidden">
+        <div class="bg-blue-600 p-6 text-white text-center">
+            <h1 class="text-2xl font-bold">💊 MedAssist Pro</h1>
         </div>
-        <div class="mb-3">
-            <label class="form-label fw-bold">Til:</label>
-            <select id="til" class="form-select">
-                <option value="O'zbek">O'zbekcha</option>
-                <option value="Ruscha">Русский</option>
-            </select>
+        <div class="p-6">
+            <label class="block font-bold mb-2">Dori nomi:</label>
+            <input type="text" id="drugName" class="w-full p-3 border rounded-lg mb-4" placeholder="Masalan: Analgin">
+            
+            <button onclick="askAI()" id="btn" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition">
+                AI dan ma'lumot olish
+            </button>
+
+            <div id="result" class="mt-6 p-4 border-l-4 border-blue-500 bg-blue-50 hidden">
+                <p class="font-bold text-gray-700">Natija:</p>
+                <div id="aiResponse" class="text-gray-600 mt-2 whitespace-pre-wrap text-sm"></div>
+            </div>
         </div>
-        <button onclick="qidiruv()" class="btn btn-primary w-100">AI dan ma'lumot olish</button>
-        <div id="javob"></div>
     </div>
-</div>
 
-<script>
-    async function qidiruv() {
-        const nom = document.getElementById('nom').value;
-        const til = document.getElementById('til').value;
-        const box = document.getElementById('javob');
-        if(!nom) return alert("Nomini yozing!");
-        
-        box.style.display = "block";
-        box.innerHTML = "⌛ AI qidirmoqda...";
+    <script>
+        async function askAI() {
+            const drug = document.getElementById('drugName').value;
+            const btn = document.getElementById('btn');
+            const resultDiv = document.getElementById('result');
+            const responseDiv = document.getElementById('aiResponse');
 
-        try {
-            const res = await fetch('/api', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ nom: nom, til: til })
-            });
-            const data = await res.json();
-            box.innerHTML = "<b>Natija:</b><br>" + data.text;
-        } catch (e) {
-            box.innerHTML = "❌ Xatolik yuz berdi.";
+            if(!drug) return alert('Dori nomini yozing!');
+
+            btn.disabled = true;
+            btn.innerText = 'Qidirilmoqda...';
+            resultDiv.classList.remove('hidden');
+            responseDiv.innerText = 'AI javobini kuting...';
+
+            try {
+                const response = await fetch('/get_info', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({drug: drug})
+                });
+                const data = await response.json();
+                responseDiv.innerText = data.result;
+            } catch (e) {
+                responseDiv.innerText = 'Xatolik yuz berdi. Qaytadan urinib koʻring.';
+            } finally {
+                btn.disabled = false;
+                btn.innerText = 'AI dan ma'lumot olish';
+            }
         }
-    }
-</script>
+    </script>
 </body>
 </html>
 """
 
 @app.route('/')
-def home():
+def index():
     return render_template_string(HTML_TEMPLATE)
 
-@app.route('/api', methods=['POST'])
-def api():
+@app.route('/get_info', methods=['POST'])
+def get_info():
     data = request.json
-    prompt = f"{data['nom']} dori haqida {data['til']} tilida batafsil ma'lumot ber."
+    drug = data.get('drug')
     try:
-        res = model.generate_content(prompt)
-        return jsonify({"text": res.text})
+        # Promptni o'zbek tilida so'rashni tayinlaymiz
+        prompt = f"{drug} dori vositasi haqida o'zbek tilida batafsil ma'lumot ber (qo'llanilishi, dozasi, nojo'ya ta'sirlari)."
+        response = model.generate_content(prompt)
+        return jsonify({'result': response.text})
     except Exception as e:
-        return jsonify({"text": str(e)})
+        return jsonify({'result': str(e)})
 
-if __name__ == '__main__':
-    app.run(debug=True)
+if name == 'main':
+    app.run(host='0.0.0.0', port=10000)
