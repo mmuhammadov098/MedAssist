@@ -5,7 +5,7 @@ from flask import Flask, request, jsonify, render_template_string
 genai.configure(api_key="AIzaSyCe-WC2_SuzsBQchcRg8a-uT52rfHdMyj0")
 model = genai.GenerativeModel('gemini-pro') # 'gemini-1.5-flash' o'rniga 'gemini-pro' ishlatamiz
 
-app = Flask(name)
+app = Flask(__name__)
 
 HTML_TEMPLATE = """
 <!DOCTYPE html>
