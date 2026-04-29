@@ -3,76 +3,64 @@ from flask import Flask, request, jsonify, render_template_string
 
 app = Flask(__name__)
 
-# Dori vositalari bazasi (Mustaqil baza)
-MED_DATABASE = {
+# Dori bazasi
+MED_DATA = {
     "yodamarin": {
-        "uz": "Yodamarin - yod tanqisligini oldini olish uchun dori. Tarkibi: Kaliy yodid.",
-        "ru": "Йодомарин - препарат для профилактики дефицита йода. Состав: Калия йодид.",
-        "en": "Yodamarin - a drug for the prevention of iodine deficiency. Composition: Potassium iodide."
+        "uz": "Yodamarin - yod tanqisligini oldini oluvchi dori. Tarkibi: Kaliy yodid.",
+        "ru": "Йодомарин - для профилактики дефицита йода. Состав: Калия йодид.",
+        "en": "Yodamarin - prevents iodine deficiency. Composition: Potassium iodide."
     },
     "analgin": {
-        "uz": "Analgin - og'riq qoldiruvchi va isitma tushiruvchi dori. Tarkibi: Metamizol natriy.",
-        "ru": "Анальгин - анальгезирующее ненаркотическое средство. Состав: Метамизол натрия.",
-        "en": "Analgin - an analgesic and antipyretic drug. Composition: Metamizole sodium."
+        "uz": "Analgin - og'riq qoldiruvchi dori. Tarkibi: Metamizol natriy.",
+        "ru": "Анальгин - обезболивающее средство. Состав: Метамизол натрия.",
+        "en": "Analgin - pain relief medicine. Composition: Metamizole sodium."
     }
 }
 
-# HTML Kod - Logotip va chiroyli interfeys bilan
-HTML_CODE = """
+HTML = """
 <!DOCTYPE html>
-<html lang="uz">
+<html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MedAssist Pro</title>
-    
     <link rel="icon" href="https://img.icons8.com/color/96/pill.png" type="image/png">
-    <link rel="apple-touch-icon" href="https://img.icons8.com/color/192/pill.png">
-    
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body { background: #f4f7f6; padding: 20px; font-family: 'Segoe UI', sans-serif; }
-        .card { max-width: 550px; margin: auto; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); border: none; overflow: hidden; }
-        .header { background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%); color: white; padding: 25px; text-align: center; }
-        .btn-lang { width: 32%; font-weight: bold; border-radius: 12px; padding: 12px; }
-        #result { background: white; border: 1px solid #eee; padding: 20px; border-radius: 15px; min-height: 150px; margin-top: 20px; line-height: 1.8; color: #333; font-size: 16px; }
-        .disclaimer { font-size: 12px; color: #d93025; text-align: center; margin-top: 15px; font-weight: bold; background: #fbe9e7; padding: 10px; border-radius: 10px; }
+        body { background: #f4f7f6; padding: 20px; font-family: sans-serif; }
+        .card { max-width: 500px; margin: auto; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); border: none; }
+        .header { background: #1a73e8; color: white; padding: 20px; text-align: center; border-radius: 20px 20px 0 0; }
+        .btn-l { width: 32%; font-weight: bold; }
+        #res { background: white; padding: 15px; border-radius: 10px; min-height: 100px; margin-top: 15px; border: 1px solid #eee; }
     </style>
 </head>
 <body>
     <div class="card">
         <div class="header">
-            <img src="https://img.icons8.com/color/96/pill.png" width="50" height="50" alt="Logo" class="mb-2">
-            <h3>MedAssist Pro</h3>
-            <p class="mb-0 small">Professional Tibbiy Ma'lumotnoma</p>
+            <img src="https://img.icons8.com/color/96/pill.png" width="40" class="mb-2">
+            <h4>MedAssist Pro</h4>
         </div>
         <div class="p-4 bg-white">
-            <input type="text" id="drugInput" class="form-control form-control-lg mb-3 shadow-sm" placeholder="Dori nomini yozing...">
-            <div class="d-flex justify-content-between mb-3">
-                <button onclick="getInfo('uz')" class="btn btn-primary btn-lang">O'zbek</button>
-                <button onclick="getInfo('ru')" class="btn btn-info text-white btn-lang">Русский</button>
-                <button onclick="getInfo('en')" class="btn btn-dark btn-lang">English</button>
+            <input type="text" id="inp" class="form-control mb-3" placeholder="Dori nomi...">
+            <div class="d-flex justify-content-between">
+                <button onclick="get('uz')" class="btn btn-primary btn-l">O'zbek</button>
+                <button onclick="get('ru')" class="btn btn-info text-white btn-l">Русский</button>
+                <button onclick="get('en')" class="btn btn-dark btn-l">English</button>
             </div>
-            <div id="result">Natija bu yerda chiqadi.</div>
-            <p class="disclaimer">⚠️ DIQQAT: SHIFOKOR BILAN MASLAHATLASHING!</p>
+            <div id="res">Natija...</div>
+            <p class="text-danger mt-3 small text-center fw-bold">⚠️ SHIFOKOR MASLAHATI SHART!</p>
         </div>
     </div>
     <script>
-        function getInfo(lang) {
-            const drug = document.getElementById('drugInput').value.toLowerCase().trim();
-            if(!drug) { alert("Iltimos, dori nomini yozing!"); return; }
-            
-            fetch('/get_data', {
+        function get(l) {
+            const d = document.getElementById('inp').value.toLowerCase().trim();
+            if(!d) return alert("Nomini yozing!");
+            fetch('/data', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({name: drug, lang: lang})
-            })
-            .then(res => res.json())
-            .then(data => {
-                document.getElementById('result').innerText = data.text;
-            })
-            .catch(err => {
-                document.getElementById('result').innerText = "Tarmoq xatosi.";
+                body: JSON.stringify({n: d, l: l})
+            }).then(r => r.json()).then(data => {
+                document.getElementById('res').innerText = data.t;
             });
         }
     </script>
@@ -81,25 +69,16 @@ HTML_CODE = """
 """
 
 @app.route('/')
-def index():
-    return render_template_string(HTML_CODE)@app.route('/get_data', methods=['POST'])
-def get_data():
-    data = request.json
-    name = data.get('name')
-    lang = data.get('lang')
-    
-    # Baza dan qidirish
-    drug_info = MED_DATABASE.get(name)
-    if drug_info:
-        return jsonify({"text": drug_info.get(lang)})
-    else:
-        # Topilmasa javob
-        messages = {
-            'uz': "Kechirasiz, bu dori bazada topilmadi.",
-            'ru': "Извините, этот препарат не найден.",
-            'en': "Sorry, this drug was not found."
-        }
-        return jsonify({"text": messages.get(lang, "Not found.")})
+def home():
+    return render_template_string(HTML)
+
+@app.route('/data', methods=['POST'])
+def data():
+    req = request.json
+    d = MED_DATA.get(req.get('n'))
+    if d:
+        return jsonify({"t": d.get(req.get('l'))})
+    return jsonify({"t": "Topilmadi."})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
