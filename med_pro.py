@@ -3,6 +3,7 @@ from flask import Flask, request, jsonify, render_template_string
 from groq import Groq
 
 app = Flask(__name__)
+# GROQ_API_KEY ni Render settings'dan qo'shishni unutmang!
 client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
 HTML_TEMPLATE = """
@@ -12,119 +13,113 @@ HTML_TEMPLATE = """
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MedAssist Pro</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body { background: #f4f7f6; padding: 15px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        .card { max-width: 420px; margin: auto; border-radius: 20px; border: none; box-shadow: 0 15px 35px rgba(0,0,0,0.1); }
-        .header { background: #007bff; color: white; padding: 20px; text-align: center; border-radius: 20px 20px 0 0; }
-        .result-box { background: white; padding: 15px; border-radius: 12px; margin-top: 15px; min-height: 120px; border: 1px solid #e0e0e0; }
-        .label-blue { color: #007bff; font-weight: bold; display: block; margin-top: 8px; font-size: 0.9rem; text-transform: uppercase; }
-        .value-text { display: block; margin-bottom: 5px; color: #333; font-size: 1rem; line-height: 1.4; }
-        .alarm-zone { background: #e3f2fd; padding: 15px; border-radius: 15px; border: 2px dashed #007bff; margin-top: 20px; }
+        body { font-family: sans-serif; background: #f0f2f5; display: flex; justify-content: center; padding: 20px; }
+        .main-card { background: white; width: 100%; max-width: 400px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); overflow: hidden; }
+        .top-bar { background: #007bff; color: white; padding: 20px; text-align: center; font-size: 22px; font-weight: bold; }
+        .content { padding: 20px; }
+        input, button { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #ddd; box-sizing: border-box; }
+        button { cursor: pointer; border: none; font-weight: bold; transition: 0.3s; }
+        .btn-search { background: #007bff; color: white; }
+        .btn-lang { width: 32%; display: inline-block; background: #6c757d; color: white; font-size: 12px; }
+        .result-area { background: #fff; border: 1px solid #eee; padding: 15px; margin-top: 15px; min-height: 100px; border-left: 5px solid #007bff; }
+        .alarm-area { margin-top: 20px; padding: 15px; background: #fff3cd; border-radius: 10px; border: 1px solid #ffeeba; }
+        .blue-title { color: #007bff; font-weight: bold; margin-top: 10px; display: block; }
     </style>
 </head>
 <body>
-    <div class="card">
-        <div class="header"><h3>💊 MedAssist Pro</h3></div>
-        <div class="p-3">
-            <button onclick="initSystem()" id="initBtn" class="btn btn-danger w-100 mb-3">🔔 TIZIMNI AKTIVLASHTIRISH</button>
+    <div class="main-card">
+        <div class="top-bar">💊 MedAssist Pro</div>
+        <div class="content">
+            <input type="text" id="drugInput" placeholder="Dori nomini yozing (masalan: Analgin)">
             
-            <input type="text" id="drugName" class="form-control mb-2" placeholder="Dori nomini yozing...">
-            <div class="btn-group w-100 mb-3">
-                <button onclick="fetchInfo('uz')" class="btn btn-primary">O'ZBEK</button>
-                <button onclick="fetchInfo('ru')" class="btn btn-info text-white">РУССКИЙ</button>
-                <button onclick="fetchInfo('en')" class="btn btn-dark">ENGLISH</button>
+            <div style="display: flex; justify-content: space-between;">
+                <button class="btn-lang" onclick="setLang('uz')">O'ZBEK</button>
+                <button class="btn-lang" onclick="setLang('ru')">РУССКИЙ</button>
+                <button class="btn-lang" onclick="setLang('en')">ENGLISH</button>
             </div>
 
-            <div id="display" class="result-box">Ma'lumot bu yerda chiqadi...</div>
+            <button class="btn-search" onclick="searchDrug()">QIDIRISH</button>
 
-            <div class="alarm-zone">
-                <h6 class="text-center fw-bold">⏰ DORINI ESLATISH</h6>
-                <div class="d-flex gap-2 my-2">
-                    <input type="time" id="alarmTime" class="form-control">
-                    <input type="number" id="days" class="form-control" placeholder="Kun">
-                </div>
-                <button onclick="saveAlarm()" class="btn btn-success w-100">ESLATMANI YOQISH</button>
-                <div id="alarmStatus" class="small mt-2 text-center text-primary fw-bold"></div>
+            <div id="output" class="result-area">Ma'lumotlar bu yerda ko'rinadi...</div>
+
+            <div class="alarm-area">
+                <h4 style="margin: 0 0 10px 0; text-align: center;">⏰ ESLATMA O'RNATISH</h4>
+                <input type="time" id="alarmTime">
+                <button style="background: #28a745; color: white;" onclick="setupAlarm()">SAQLASH</button>
+                <p id="alarmDisplay" style="text-align: center; color: #155724; font-size: 14px;"></p>
             </div>
         </div>
     </div>
 
     <script>
-        function initSystem() {
-            window.speechSynthesis.getVoices();
-            document.getElementById('initBtn').className = "btn btn-outline-success w-100 mb-3";
-            document.getElementById('initBtn').innerText = "✅ Tizim tayyor";
-            alert("Ovozli eslatmalar faollashdi!");
-        }
+        let currentLang = 'uz';
+        function setLang(l) { currentLang = l; alert("Til o'zgardi: " + l); }
 
-        async function fetchInfo(lang) {
-            const name = document.getElementById('drugName').value;
+        async function searchDrug() {
+            const name = document.getElementById('drugInput').value;
             if(!name) return;
-            const box = document.getElementById('display');
-            box.innerHTML = "⌛ AI qidirmoqda...";
-            
+            const out = document.getElementById('output');
+            out.innerHTML = "⌛ Qidirilmoqda...";
+
             try {
-                const response = await fetch('/api/get-info', {
+                const res = await fetch('/api/get', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({name, lang})
+                    body: JSON.stringify({name, lang: currentLang})
                 });
-                const data = await response.json();
+                const data = await res.json();
                 
-                let formatted = "";
-                data.text.split('\\n').forEach(line => {
-                    if(line.includes(':')) {let [title, ...content] = line.split(':');
-                        formatted += <span class="label-blue">${title.trim()}:</span>;
-                        formatted += <span class="value-text">${content.join(':').trim()}</span>;
-                    }
-                });
-                box.innerHTML = formatted || data.text;
-            } catch (e) { box.innerText = "❌ Xatolik yuz berdi!"; }
+                // Ma'lumot chiqmaslik muammosini hal qilish:
+                let text = data.text;
+                let formatted = text.replace(/Tarkibi:/g, '<b class="blue-title">TARKIBI:</b>')
+                                    .replace(/Dozasi:/g, '<b class="blue-title">DOZASI:</b>').replace(/Foydasi:/g, '<b class="blue-title">FOYDASI:</b>')
+                                    .replace(/Zarari:/g, '<b class="blue-title">ZARARI:</b>');
+                out.innerHTML = formatted;
+            } catch (e) { out.innerHTML = "❌ Xato yuz berdi!"; }
         }
 
-        function saveAlarm() {
+        function setupAlarm() {
             const t = document.getElementById('alarmTime').value;
             if(!t) return;
-            localStorage.setItem('med_reminder_time', t);
-            document.getElementById('alarmStatus').innerText = "🔔 Reja: " + t;
-            alert("Eslatma saqlandi!");
+            localStorage.setItem('med_time', t);
+            document.getElementById('alarmDisplay').innerText = "🔔 Eslatma " + t + " ga qo'yildi";
         }
 
+        // Eslatmani tekshirish (Har 30 soniyada)
         setInterval(() => {
-            const setTime = localStorage.getItem('med_reminder_time');
-            if(!setTime) return;
-            const now = new Date();
-            const nowStr = now.getHours().toString().padStart(2,'0') + ":" + now.getMinutes().toString().padStart(2,'0');
+            const saved = localStorage.getItem('med_time');
+            if(!saved) return;
+            const d = new Date();
+            const now = d.getHours().toString().padStart(2,'0') + ":" + d.getMinutes().toString().padStart(2,'0');
             
-            if(nowStr === setTime) {
-                let msg = new SpeechSynthesisUtterance("Diqqat, dori ichish vaqti bo'ldi!");
-                msg.lang = 'uz-UZ';
-                window.speechSynthesis.speak(msg);
-                alert("🚨 DORI ICHISH VAQTI!!! 🚨");
-                localStorage.removeItem('med_reminder_time');
-                document.getElementById('alarmStatus').innerText = "";
+            if(now === saved) {
+                alert("🚨 VAQT BO'LDI! DORINGIZNI ICHING! 🚨");
+                localStorage.removeItem('med_time');
+                document.getElementById('alarmDisplay').innerText = "";
             }
-        }, 10000);
+        }, 30000);
     </script>
 </body>
 </html>
 """
 
 @app.route('/')
-def home(): return render_template_string(HTML_TEMPLATE)
+def index(): return render_template_string(HTML_TEMPLATE)
 
-@app.route('/api/get-info', methods=['POST'])
-def get_info():
-    req = request.json
+@app.route('/api/get', methods=['POST'])
+def get_drug():
+    data = request.json
     try:
-        p = f"Dori: {req['name']}. Til: {req['lang']}. Faqat 4 punkt: TARKIBI:, DOZASI:, FOYDASI:, ZARARI:. Qisqa va aniq yoz."
-        res = client.chat.completions.create(
+        # AI ga aniq buyruq
+        prompt = f"Dori: {data['name']}. Til: {data['lang']}. Faqat shu 4 ta punktda javob ber: Tarkibi:, Dozasi:, Foydasi:, Zarari:. Ortiqcha so'z yozma."
+        chat_completion = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
-            messages=[{"role": "user", "content": p}]
+            messages=[{"role": "user", "content": prompt}]
         )
-        return jsonify({"text": res.choices[0].message.content})
-    except: return jsonify({"text": "AI bog'lanishda xato!"})
+        return jsonify({"text": chat_completion.choices[0].message.content})
+    except:
+        return jsonify({"text": "Xato: AI bilan bog'lanib bo'lmadi."})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
