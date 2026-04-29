@@ -14,108 +14,100 @@ HTML = """
     <title>MedAssist Pro</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body { background: #f4f7f6; padding: 15px; font-family: 'Segoe UI', sans-serif; }
-        .card { max-width: 450px; margin: auto; border-radius: 20px; border: none; box-shadow: 0 10px 30px rgba(0,0,0,0.08); background: white; }
-        .header { background: #007bff; color: white; padding: 20px; text-align: center; border-radius: 20px 20px 0 0; }
-        
-        /* 4 ta asosiy bo'lim uchun ko'k sarlavha */
-        .med-label { color: #007bff; font-weight: 800; font-size: 14px; text-transform: uppercase; margin-top: 12px; display: block; border-bottom: 1px solid #eef2f7; }
-        .med-value { color: #334155; font-size: 15px; margin-bottom: 8px; display: block; line-height: 1.4; }
-        
-        #res { min-height: 50px; padding: 10px; }
-        .alarm-box { background: #e8f5e9; padding: 20px; border-radius: 15px; border: 2px solid #c8e6c9; margin-top: 20px; }
-        .btn-success { background: #2e7d32; border: none; font-weight: bold; }
+        body { background: #f0f4f8; padding: 15px; font-family: sans-serif; }
+        .card { max-width: 400px; margin: auto; border-radius: 20px; border: none; box-shadow: 0 10px 25px rgba(0,0,0,0.1); background: white; }
+        .header { background: #007bff; color: white; padding: 15px; text-align: center; border-radius: 20px 20px 0 0; }
+        .med-title { color: #007bff; font-weight: bold; text-transform: uppercase; font-size: 13px; margin-top: 10px; display: block; }
+        .med-text { display: block; margin-bottom: 8px; color: #334; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+        .alarm-area { background: #e8f5e9; padding: 15px; border-radius: 15px; border: 2px solid #2e7d32; margin-top: 20px; }
     </style>
 </head>
 <body>
     <div class="card">
-        <div class="header"><h3>💊 MedAssist Pro</h3></div>
-        <div class="p-4">
-            <button onclick="initAudio()" class="btn btn-outline-primary btn-sm w-100 mb-3">🔔 Eslatmani faollashtirish (Bosing)</button>
+        <div class="header"><h4>💊 MedAssist Pro</h4></div>
+        <div class="p-3">
+            <button onclick="startApp()" id="startBtn" class="btn btn-danger w-100 mb-3">🔴 Tizimni faollashtirish (BOSING!)</button>
             
-            <input type="text" id="d" class="form-control mb-3" placeholder="Dori nomi...">
-            <div class="d-flex gap-2">
-                <button onclick="getMed('uz')" class="btn btn-primary w-100">O'zbekcha</button>
-                <button onclick="getMed('ru')" class="btn btn-info text-white w-100">Русский</button>
+            <input type="text" id="d" class="form-control mb-2" placeholder="Dori nomi...">
+            <div class="d-flex gap-2 mb-3">
+                <button onclick="ask('uz')" class="btn btn-primary w-100">O'ZBEKCHA</button>
+                <button onclick="ask('ru')" class="btn btn-info text-white w-100">РУССКИЙ</button>
             </div>
 
-            <div id="res" class="mt-3">Ma'lumot kutilmoqda...</div>
+            <div id="res" class="p-2">Ma'lumot kutilmoqda...</div>
 
-            <div class="alarm-box">
-                <h6 class="text-center fw-bold text-success">⏰ DORI ICHISH VAQTI</h6>
+            <div class="alarm-area">
+                <h6 class="text-center fw-bold text-success">⏰ ESLATMA VAQTI</h6>
                 <div class="d-flex gap-2 my-2">
-                    <input type="time" id="t" class="form-control">
+                    <input type="time" id="v" class="form-control">
                     <input type="number" id="k" class="form-control" placeholder="Kun">
                 </div>
-                <button onclick="setupAlarm()" class="btn btn-success w-100">Eslatmani saqlash</button>
-                <div id="msg" class="small mt-2 text-center text-success fw-bold"></div>
+                <button onclick="setAlarm()" class="btn btn-success w-100">ESLATMANI YOQISH</button>
+                <div id="st" class="small mt-2 text-center fw-bold text-primary"></div>
             </div>
         </div>
     </div>
 
     <script>
-        // Brauzer ovoz chiqarishi uchun ruxsat
-        function initAudio() {
+        // Brauzer ovozini va xabarnomasini yoqish
+        function startApp() {
             window.speechSynthesis.getVoices();
-            alert("Eslatma tizimi tayyor!");
+            Notification.requestPermission();
+            document.getElementById('startBtn').className = "btn btn-outline-success w-100 mb-3";
+            document.getElementById('startBtn').innerText = "✅ Tizim tayyor";
+            alert("Tizim faollashdi! Endi eslatma ishlaydi.");
         }
 
-        async function getMed(lang) {
-            const d = document.getElementById('d').value;
-            if(!d) return;
-            const res = document.getElementById('res');
-            res.innerHTML = "⌛ AI tayyorlamoqda...";
+        async function ask(lang) {
+            const name = document.getElementById('d').value;
+            if(!name) return;
+            document.getElementById('res').innerHTML = "⌛ AI qidirmoqda...";
             
             try {
-                const response = await fetch('/get', {
+                const r = await fetch('/api', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({name: d, lang: lang})
+                    body: JSON.stringify({name, lang})
                 });
-                const data = await response.json();
+                const data = await r.json();
                 
-                // Matnni 4 ta bo'limga bo'lib ko'kda chiqarish
-                let lines = data.text.split('\\n');
-                let html = "";
-                lines.forEach(l => {
-                    if(l.includes(':')) {
-                        let [title, ...content] = l.split(':');
-                        html += <span class="med-label">${title.trim()}:</span>;html += <span class="med-value">${content.join(':').trim()}</span>;
+                let out = "";
+                data.text.split('\\n').forEach(line => {
+                    if(line.includes(':')) {
+                        let [t, ...c] = line.split(':');
+                        out += <span class="med-title">${t.trim()}:</span><span class="med-text">${c.join(':').trim()}</span>;
                     }
                 });
-                res.innerHTML = html || data.text;
-            } catch { res.innerHTML = "❌ Xato!"; }
+                document.getElementById('res').innerHTML = out || data.text;
+            } catch (e) { document.getElementById('res').innerText = "❌ Xato!"; }
+        }function setAlarm() {
+            const time = document.getElementById('v').value;
+            if(!time) return alert("Vaqtni tanlang!");
+            localStorage.setItem('med_alarm', time);
+            document.getElementById('st').innerText = "🔔 " + time + " ga qo'yildi";
+            alert("Eslatma saqlandi!");
         }
 
-        function setupAlarm() {
-            const time = document.getElementById('t').value;
-            if(!time) return alert("Vaqtni kiriting!");
-            localStorage.setItem('med_time', time);
-            document.getElementById('msg').innerText = "✅ Eslatma " + time + " ga qo'yildi";
-        }
-
-        // Har 15 soniyada tekshirish
         setInterval(() => {
-            const savedTime = localStorage.getItem('med_time');
-            if(!savedTime) return;
-            
+            const alarm = localStorage.getItem('med_alarm');
+            if(!alarm) return;
             const now = new Date();
             const cur = now.getHours().toString().padStart(2,'0') + ":" + now.getMinutes().toString().padStart(2,'0');
             
-            if(cur === savedTime) {
-                // 1. Ovozli xabar
-                let talk = new SpeechSynthesisUtterance("Dori ichish vaqti bo'ldi!");
-                talk.lang = 'uz-UZ';
-                window.speechSynthesis.speak(talk);
+            if(cur === alarm) {
+                // 1. Baqirish (Ovoz)
+                const speak = new SpeechSynthesisUtterance("Diqqat! Dori ichish vaqti bo'ldi!");
+                speak.lang = 'uz-UZ';
+                window.speechSynthesis.speak(speak);
                 
-                // 2. Ekrandagi ogohlantirish
-                alert("🚨🚨🚨 VAQT BO'LDI! DORINGIZNI ICHING! 🚨🚨🚨");
+                // 2. Ekrandagi xabar
+                alert("🚨🚨🚨 DORI ICHISH VAQTI!!! 🚨🚨🚨");
                 
-                // Bir marta ishlagach to'xtatish (ixtiyoriy)
-                localStorage.removeItem('med_time');
-                document.getElementById('msg').innerText = "";
+                // Bir marta chalingach o'chadi
+                localStorage.removeItem('med_alarm');
+                document.getElementById('st').innerText = "";
             }
-        }, 15000);
+        }, 10000);
     </script>
 </body>
 </html>
@@ -124,18 +116,18 @@ HTML = """
 @app.route('/')
 def home(): return render_template_string(HTML)
 
-@app.route('/get', methods=['POST'])
-def get_med():
-    data = request.json
+@app.route('/api', methods=['POST'])
+def api():
+    d = request.json
     try:
-        # AI ga qat'iy buyruq: faqat 4 ta qisqa band
-        prompt = f"Dori: {data['name']}. Til: {data['lang']}. Faqat 4 ta bandda juda qisqa javob ber: 1.Tarkibi:, 2.Dozasi:, 3.Foydasi:, 4.Zarari:. Boshqa so'z qo'shma."
+        # AI ga qat'iy 4 ta bandni ko'kda chiqarish uchun buyruq
+        p = f"Dori: {d['name']}. Til: {d['lang']}. Faqat 4 band: TARKIBI:, DOZASI:, FOYDASI:, ZARARI:. Qisqa yoz."
         res = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
-            messages=[{"role": "user", "content": prompt}]
+            messages=[{"role": "user", "content": p}]
         )
         return jsonify({"text": res.choices[0].message.content})
-    except: return jsonify({"text": "Xato yuz berdi."})
+    except: return jsonify({"text": "AI xatosi!"})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
