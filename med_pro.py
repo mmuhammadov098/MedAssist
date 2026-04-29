@@ -19,12 +19,10 @@ HTML = """
         .card { max-width: 550px; margin: auto; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border: none; margin-bottom: 20px; }
         .header { background: #1a73e8; color: white; padding: 20px; text-align: center; border-radius: 20px 20px 0 0; }
         .btn-l { width: 32%; font-weight: bold; border-radius: 10px; }
-        #res { background: white; padding: 20px; border-radius: 15px; border: 1px solid #e0e0e0; min-height: 150px; }
-        .section-title { color: #1a73e8; font-weight: bold; margin-top: 10px; border-bottom: 1px solid #eee; }
-        .content-text { margin-bottom: 15px; font-size: 15px; }
+        #res { background: white; padding: 20px; border-radius: 15px; border: 1px solid #e0e0e0; min-height: 150px; margin-top: 15px; }
+        .alarm-card { background: #e8f5e9; padding: 15px; border-radius: 15px; margin-top: 20px; border: 1px solid #4caf50; }
         .history-item { cursor: pointer; padding: 8px; border-bottom: 1px solid #eee; color: #1a73e8; }
-        .history-item:hover { background: #f8f9fa; }
-        .alarm-card { background: #e3f2fd; padding: 15px; border-radius: 15px; margin-top: 15px; }
+        .section-title { color: #1a73e8; font-weight: bold; margin-top: 10px; }
     </style>
 </head>
 <body>
@@ -41,36 +39,37 @@ HTML = """
                 <button onclick="ask('inglizcha')" class="btn btn-dark btn-l">English</button>
             </div>
             
-            <div id="res">Natija...</div>
+            <div id="res">Natija bu yerda chiqadi.</div>
 
             <div class="alarm-card">
-                <h6>⏰ Dori ichish eslatmasi:</h6>
-                <div class="d-flex gap-2">
-                    <input type="time" id="alarmTime" class="form-control">
-                    <button onclick="setAlarm()" class="btn btn-success btn-sm">O'rnatish</button>
+                <h6>⏰ Kursli eslatma o'rnatish:</h6>
+                <div class="row g-2">
+                    <div class="col-6">
+                        <label class="small">Vaqti:</label>
+                        <input type="time" id="alarmTime" class="form-control">
+                    </div>
+                    <div class="col-6">
+                        <label class="small">Kunlar soni:</label>
+                        <input type="number" id="alarmDays" class="form-control" placeholder="Masalan: 3" min="1">
+                    </div>
                 </div>
-                <div id="alarmStatus" class="small mt-2 text-muted"></div>
+                <button onclick="setSmartAlarm()" class="btn btn-success btn-sm w-100 mt-2 fw-bold">Eslatmani yoqish</button>
+                <div id="alarmStatus" class="small mt-2 text-success fw-bold text-center"></div>
             </div>
 
             <div class="mt-4">
                 <h6>📜 Oxirgi qidiruvlar:</h6>
                 <div id="historyList" class="small"></div>
-                <button onclick="clearHistory()" class="btn btn-link btn-sm p-0 text-danger">Tarixni tozalash</button>
             </div>
         </div>
     </div>
 
     <script>
-        // 1. Qidiruv tarixini yuklash
-        document.addEventListener('DOMContentLoaded', updateHistoryUI);
-
         async function ask(til) {
             const d = document.getElementById('inp').value.trim();
             if(!d) return alert("Dori nomini yozing!");
-            
             document.getElementById('res').innerHTML = "Yuklanmoqda...";
-            addToHistory(d);
-
+            
             const r = await fetch('/data', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
@@ -78,9 +77,8 @@ HTML = """
             });
             const data = await r.json();
             document.getElementById('res').innerHTML = data.t;
-        }
-
-        // Qidiruv tarixi funksiyalarifunction addToHistory(name) {
+            addToHistory(d);
+        }function addToHistory(name) {
             let history = JSON.parse(localStorage.getItem('medHistory') || '[]');
             if(!history.includes(name)) {
                 history.unshift(name);
@@ -92,62 +90,72 @@ HTML = """
 
         function updateHistoryUI() {
             let history = JSON.parse(localStorage.getItem('medHistory') || '[]');
-            const list = document.getElementById('historyList');
-            list.innerHTML = history.map(item => <div class="history-item" onclick="document.getElementById('inp').value='${item}'">${item}</div>).join('');
+            document.getElementById('historyList').innerHTML = history.map(item => <div class="history-item" onclick="document.getElementById('inp').value='${item}'">${item}</div>).join('');
         }
 
-        function clearHistory() {
-            localStorage.removeItem('medHistory');
-            updateHistoryUI();
-        }
-
-        // 2. Budilnik funksiyasi
-        function setAlarm() {
+        // AQLLI BUDILNIK FUNKSIYASI
+        function setSmartAlarm() {
             const time = document.getElementById('alarmTime').value;
-            if(!time) return alert("Vaqtni tanlang!");
-            localStorage.setItem('medAlarm', time);
-            document.getElementById('alarmStatus').innerText = "Eslatma o'rnatildi: " + time;
-            checkAlarm();
+            const days = parseInt(document.getElementById('alarmDays').value);
+
+            if(!time || !days) return alert("Vaqt va kunni to'liq kiriting!");
+
+            const startDate = new Date();
+            const endDate = new Date();
+            endDate.setDate(startDate.getDate() + days);
+
+            const alarmConfig = {
+                time: time,
+                endTimestamp: endDate.getTime(),
+                daysLeft: days
+            };
+
+            localStorage.setItem('smartAlarm', JSON.stringify(alarmConfig));
+            document.getElementById('alarmStatus').innerText = ✅ ${days} kunlik eslatma ${time} ga qo'yildi!;
+            alert(${days} kun davomida har kuni soat ${time}da eslatma beriladi.);
         }
 
-        function checkAlarm() {
-            setInterval(() => {
-                const now = new Date();
-                const currentTime = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
-                const savedTime = localStorage.getItem('medAlarm');
+        setInterval(() => {
+            const alarmData = JSON.parse(localStorage.getItem('smartAlarm'));
+            if(!alarmData) return;
+
+            const now = new Date();
+            const currentTimestamp = now.getTime();
+
+            // Muddat tugaganini tekshirish
+            if(currentTimestamp > alarmData.endTimestamp) {
+                localStorage.removeItem('smartAlarm');
+                document.getElementById('alarmStatus').innerText = "🏁 Kurs yakunlandi.";
+                return;
+            }
+
+            const currentTimeStr = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
+            
+            if(currentTimeStr === alarmData.time) {
+                // Ovozli xabar
+                const msg = new SpeechSynthesisUtterance("Dori ichish vaqti bo'ldi!");
+                window.speechSynthesis.speak(msg);
                 
-                if(currentTime === savedTime) {
-                    alert("⏰ VAQT BO'LDI! Doriningizni ichishni unutmang!");
-                    localStorage.removeItem('medAlarm'); // Bir marta chalingandan keyin o'chirish
-                    document.getElementById('alarmStatus').innerText = "";
-                }
-            }, 1000 * 30); // Har 30 soniyada tekshirish
-        }
-        checkAlarm();
+                alert("⏰ VAQT BO'LDI! Doriningizni iching.");
+                // Bir minut davomida qayta-qayta chiqmasligi uchun biroz kutish
+            }
+        }, 30000); // Har 30 soniyada tekshiradi
+
+        updateHistoryUI();
     </script>
 </body>
 </html>
 """
 
-@app.route('/')
-def home():
-    return render_template_string(HTML)
-
 @app.route('/data', methods=['POST'])
 def data():
     req = request.json
-    dori = req.get('n')
-    til = req.get('l')
-    prompt = f"Siz professional farmatsevtsiz. {dori} haqida tarkibi, foydasi, dozasi va zarari haqida FAQAT {til} tilida HTML formatda (div va b teglari bilan) ma'lumot bering."
-    
+    prompt = f"Professional farmatsevtsiz. {req.get('n')} haqida tarkibi, foydasi, dozasi va zarari haqida {req.get('l')} tilida HTML formatda ma'lumot bering."
     try:
-        completion = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=[{"role": "user", "content": prompt}]
-        )
+        completion = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=[{"role": "user", "content": prompt}])
         return jsonify({"t": completion.choices[0].message.content})
-    except Exception as e:
-        return jsonify({"t": "Xatolik yuz berdi."})
+    except:
+        return jsonify({"t": "Xatolik."})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
