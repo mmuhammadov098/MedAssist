@@ -2,7 +2,7 @@ import os
 from flask import Flask, request, jsonify, render_template_string
 from groq import Groq
 
-app = Flask(name)
+app = Flask(__name__)
 # Render dashboard-da GROQ_API_KEY o'rnatilgan bo'lishi shart
 client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
@@ -106,5 +106,5 @@ def ask():
     except Exception as e:
         return jsonify({'result': f"Xatolik: {str(e)}"})
 
-if name == 'main':
+if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
