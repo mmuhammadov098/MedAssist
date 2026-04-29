@@ -1,12 +1,14 @@
-import os
-from flask import Flask, request, jsonify, render_template_string
-from groq import Groq
+const express = require('express');
+const fetch = require('node-fetch');
+const cors = require('cors');
+const app = express();
 
-app = Flask(__name__)
-# GROQ_API_KEY ni Render settings'dan qo'shishni unutmang!
-client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
+app.use(cors());
+app.use(express.json());
 
-HTML_TEMPLATE = """
+const API_KEY = process.env.OPENAI_API_KEY;
+
+const HTML_UI = `
 <!DOCTYPE html>
 <html lang="uz">
 <head>
@@ -14,112 +16,150 @@ HTML_TEMPLATE = """
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MedAssist Pro</title>
     <style>
-        body { font-family: sans-serif; background: #f0f2f5; display: flex; justify-content: center; padding: 20px; }
-        .main-card { background: white; width: 100%; max-width: 400px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); overflow: hidden; }
-        .top-bar { background: #007bff; color: white; padding: 20px; text-align: center; font-size: 22px; font-weight: bold; }
-        .content { padding: 20px; }
-        input, button { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #ddd; box-sizing: border-box; }
-        button { cursor: pointer; border: none; font-weight: bold; transition: 0.3s; }
-        .btn-search { background: #007bff; color: white; }
-        .btn-lang { width: 32%; display: inline-block; background: #6c757d; color: white; font-size: 12px; }
-        .result-area { background: #fff; border: 1px solid #eee; padding: 15px; margin-top: 15px; min-height: 100px; border-left: 5px solid #007bff; }
-        .alarm-area { margin-top: 20px; padding: 15px; background: #fff3cd; border-radius: 10px; border: 1px solid #ffeeba; }
-        .blue-title { color: #007bff; font-weight: bold; margin-top: 10px; display: block; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; display: flex; justify-content: center; padding: 15px; }
+        .card { background: white; width: 100%; max-width: 420px; border-radius: 25px; box-shadow: 0 15px 35px rgba(0,0,0,0.15); overflow: hidden; }
+        .header { background: #007bff; color: white; padding: 25px; text-align: center; font-size: 26px; font-weight: bold; }
+        .p-3 { padding: 20px; }
+        
+        /* Tillar ranglari */
+        .btn-uz { background: #28a745 !important; color: white; } /* Yashil */
+        .btn-ru { background: #17a2b8 !important; color: white; } /* Havorang */
+        .btn-en { background: #343a40 !important; color: white; } /* To'q kulrang */
+        
+        input, button { width: 100%; padding: 14px; margin-bottom: 12px; border-radius: 12px; border: 1px solid #ddd; font-size: 16px; transition: 0.3s; }
+        button { border: none; font-weight: bold; cursor: pointer; }
+        button:active { transform: scale(0.98); }
+        
+        .btn-search { background: #007bff; color: white; margin-top: 5px; font-size: 18px; }
+        .lang-group { display: flex; gap: 8px; margin-bottom: 10px; }
+        .lang-group button { font-size: 12px; padding: 10px 5px; }
+
+        .result-box { background: #f9f9f9; border-left: 6px solid #007bff; padding: 18px; margin-top: 15px; border-radius: 8px; min-height: 100px; }
+        .blue-label { color: #007bff; font-weight: 900; display: block; margin-top: 15px; border-bottom: 1px solid #eee; padding-bottom: 3px; }
+        
+        .alarm-card { background: #fff3cd; padding: 18px; border-radius: 20px; margin-top: 25px; border: 2px solid #ffeeba; }
+        .status-text { text-align: center; font-size: 13px; color: #856404; font-weight: bold; }
     </style>
 </head>
 <body>
-    <div class="main-card">
-        <div class="top-bar">💊 MedAssist Pro</div>
-        <div class="content">
-            <input type="text" id="drugInput" placeholder="Dori nomini yozing (masalan: Analgin)">
+    <div class="card">
+        <div class="header">💊 MedAssist Pro</div>
+        <div class="p-3">
+            <input type="text" id="drugName" placeholder="Dori nomini kiriting...">
             
-            <div style="display: flex; justify-content: space-between;">
-                <button class="btn-lang" onclick="setLang('uz')">O'ZBEK</button>
-                <button class="btn-lang" onclick="setLang('ru')">РУССКИЙ</button>
-                <button class="btn-lang" onclick="setLang('en')">ENGLISH</button>
+            <div class="lang-group">
+                <button class="btn-uz" onclick="setL('uz')">O'ZBEKCHA</button>
+                <button class="btn-ru" onclick="setL('ru')">РУССКИЙ</button>
+                <button class="btn-en" onclick="setL('en')">ENGLISH</button>
             </div>
 
-            <button class="btn-search" onclick="searchDrug()">QIDIRISH</button>
+            <button class="btn-search" onclick="getInfo()">🔍 QIDIRISH</button>
 
-            <div id="output" class="result-area">Ma'lumotlar bu yerda ko'rinadi...</div>
+            <div id="res" class="result-box">Ma'lumot bu yerda chiqadi...</div>
 
-            <div class="alarm-area">
-                <h4 style="margin: 0 0 10px 0; text-align: center;">⏰ ESLATMA O'RNATISH</h4>
-                <input type="time" id="alarmTime">
-                <button style="background: #28a745; color: white;" onclick="setupAlarm()">SAQLASH</button>
-                <p id="alarmDisplay" style="text-align: center; color: #155724; font-size: 14px;"></p>
+            <div class="alarm-card">
+                <h4 style="margin:0 0 12px 0; text-align:center">⏰ KUNLIK ESLATMA</h4>
+                <input type="time" id="atime">
+                <button onclick="saveA()" style="background:#ffc107; color:#212529">SAQLASH (HAR KUNI)</button>
+                <p id="astatus" class="status-text"></p>
             </div>
         </div>
     </div>
 
     <script>
-        let currentLang = 'uz';
-        function setLang(l) { currentLang = l; alert("Til o'zgardi: " + l); }
+        let lang = 'uz';
+        function setL(l) { lang = l; alert("Tanlangan til: " + l.toUpperCase()); }
 
-        async function searchDrug() {
-            const name = document.getElementById('drugInput').value;
+        async function getInfo() {
+            const name = document.getElementById('drugName').value;
             if(!name) return;
-            const out = document.getElementById('output');
-            out.innerHTML = "⌛ Qidirilmoqda...";
-
-            try {
-                const res = await fetch('/api/get', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({name, lang: currentLang})
-                });
-                const data = await res.json();
-                
-                // Ma'lumot chiqmaslik muammosini hal qilish:
-                let text = data.text;
-                let formatted = text.replace(/Tarkibi:/g, '<b class="blue-title">TARKIBI:</b>')
-                                    .replace(/Dozasi:/g, '<b class="blue-title">DOZASI:</b>').replace(/Foydasi:/g, '<b class="blue-title">FOYDASI:</b>')
-                                    .replace(/Zarari:/g, '<b class="blue-title">ZARARI:</b>');
-                out.innerHTML = formatted;
-            } catch (e) { out.innerHTML = "❌ Xato yuz berdi!"; }
-        }
-
-        function setupAlarm() {
-            const t = document.getElementById('alarmTime').value;
-            if(!t) return;
-            localStorage.setItem('med_time', t);
-            document.getElementById('alarmDisplay').innerText = "🔔 Eslatma " + t + " ga qo'yildi";
-        }
-
-        // Eslatmani tekshirish (Har 30 soniyada)
-        setInterval(() => {
-            const saved = localStorage.getItem('med_time');
-            if(!saved) return;
-            const d = new Date();
-            const now = d.getHours().toString().padStart(2,'0') + ":" + d.getMinutes().toString().padStart(2,'0');
+            const resDiv = document.getElementById('res');
+            resDiv.innerHTML = "⌛ To'liq ma'lumot tayyorlanmoqda...";
             
-            if(now === saved) {
-                alert("🚨 VAQT BO'LDI! DORINGIZNI ICHING! 🚨");
-                localStorage.removeItem('med_time');
-                document.getElementById('alarmDisplay').innerText = "";
+            try {
+                const r = await fetch('/drug', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},body: JSON.stringify({name, lang})
+                });
+                const d = await r.json();
+                
+                // Ma'lumotni formatlash va sarlavhalarni ajratish
+                let text = d.text
+                    .replace(/TARKIBI:/gi, '<span class="blue-label">TARKIBI:</span>')
+                    .replace(/DOZASI:/gi, '<span class="blue-label">DOZASI:</span>')
+                    .replace(/FOYDASI:/gi, '<span class="blue-label">FOYDASI:</span>')
+                    .replace(/ZARARI:/gi, '<span class="blue-label">ZARARI:</span>');
+                
+                resDiv.innerHTML = text;
+            } catch(e) { resDiv.innerHTML = "❌ Aloqa xatosi!"; }
+        }
+
+        function saveA() {
+            const t = document.getElementById('atime').value;
+            if(!t) return;
+            localStorage.setItem('daily_med_time', t);
+            document.getElementById('astatus').innerText = "✅ Har kuni " + t + " da eslatiladi";
+            alert("Eslatma har kunlik rejimga o'rnatildi!");
+        }
+
+        // Har minutda tekshirish
+        setInterval(() => {
+            const savedTime = localStorage.getItem('daily_med_time');
+            if(!savedTime) return;
+            
+            const now = new Date();
+            const currentTime = now.getHours().toString().padStart(2,'0') + ":" + now.getMinutes().toString().padStart(2,'0');
+            
+            if(currentTime === savedTime) {
+                // Ovoz o'rniga alert va tebranish (Vibration API)
+                if (navigator.vibrate) navigator.vibrate([500, 200, 500]);
+                alert("🚨 KUNLIK ESLATMA: Doringizni ichish vaqti bo'ldi! (" + savedTime + ")");
             }
-        }, 30000);
+        }, 60000);
+
+        // Sahifa yuklanganda holatni ko'rsatish
+        window.onload = () => {
+            const s = localStorage.getItem('daily_med_time');
+            if(s) document.getElementById('astatus').innerText = "✅ Har kuni " + s + " da eslatiladi";
+        };
     </script>
 </body>
 </html>
-"""
+;
 
-@app.route('/')
-def index(): return render_template_string(HTML_TEMPLATE)
+app.get('/', (req, res) => res.send(HTML_UI));
 
-@app.route('/api/get', methods=['POST'])
-def get_drug():
-    data = request.json
-    try:
-        # AI ga aniq buyruq
-        prompt = f"Dori: {data['name']}. Til: {data['lang']}. Faqat shu 4 ta punktda javob ber: Tarkibi:, Dozasi:, Foydasi:, Zarari:. Ortiqcha so'z yozma."
-        chat_completion = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=[{"role": "user", "content": prompt}]
-        )
-        return jsonify({"text": chat_completion.choices[0].message.content})
-    except:
-        return jsonify({"text": "Xato: AI bilan bog'lanib bo'lmadi."})
+app.post("/drug", async (req, res) => {
+  const { name, lang } = req.body;
+  // AI ga kengaytirilgan va batafsil buyruq (Prompt)
+  const prompt = Dori nomi: ${name}. Til: ${lang}. 
+  Iltimos, dori haqida ilmiy va batafsil ma'lumot ber. 
+  Javobni aniq shu 4 ta sarlavha ostida yoz va har bir sarlavhadan keyin kamida 3-4 gapdan iborat ma'lumot bo'lsin:
+  1. TARKIBI: (kimyoviy va asosiy moddalari)
+  2. DOZASI: (bolalar va kattalar uchun alohida)
+  3. FOYDASI: (qaysi kasalliklarga qarshi)
+  4. ZARARI: (nojo'ya ta'sirlari va kimlarga mumkin emasligi)
+  Oxirida: "Muhim: Shifokor bilan maslahatlashing!" deb yoz.;
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
+  try {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": Bearer ${API_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.7
+      })
+    });
+    const data = await response.json();
+    res.json({ text: data.choices[0].message.content });
+  } catch (e) {
+    res.status(500).json({ text: "AI javob bermadi." });
+  }
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log("Loyiha ishladi!"));
