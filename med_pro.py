@@ -2,7 +2,8 @@ import os
 from flask import Flask, request, jsonify, render_template_string
 from groq import Groq
 
-app = Flask(__name__)
+app = Flask(name)
+# Render dashboard-da GROQ_API_KEY o'rnatilgan bo'lishi shart
 client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
 HTML_TEMPLATE = """
@@ -23,46 +24,39 @@ HTML_TEMPLATE = """
         pre { white-space: pre-wrap; word-wrap: break-word; font-family: inherit; font-size: 16px; color: #2c3e50; line-height: 1.7; }
         .loader { display: none; text-align: center; padding: 30px; }
         .btn-search { background: #1a73e8; color: white; padding: 12px 30px; border-radius: 10px; font-weight: 600; border: none; }
-        .btn-search:hover { background: #1557b0; color: white; }
     </style>
 </head>
 <body>
     <div class="main-card">
         <div class="disclaimer">
-            ⚠️ DIQQAT: AI tomonidan berilgan ma'lumotlar faqat tanishish uchun. Dori qabul qilishdan oldin albatta shifokor bilan maslahatlashing!
+            ⚠️ DIQQAT: AI ma'lumotlari faqat tanishish uchun. Dori qabul qilishdan oldin albatta shifokor bilan maslahatlashing!
         </div>
-
         <div class="header">
             <h2>💊 MedAssist Pro AI</h2>
             <p>Ko'p tilli tibbiy yordamchi (UZ | RU | EN)</p>
         </div>
-        
         <div class="search-section">
             <div class="input-group mb-3">
                 <input type="text" id="dori" class="form-control form-control-lg shadow-none" placeholder="Dori nomini kiriting...">
                 <button onclick="askAI()" class="btn btn-search">Qidirish</button>
             </div>
         </div>
-
         <div id="javob">
             <div class="loader" id="loader">
-                <div class="spinner-border text-primary" role="status"></div>
-                <p class="mt-3">Ma'lumotlar tekshirilmoqda, iltimos kuting...</p>
+                <div class="spinner-border text-primary"></div>
+                <p class="mt-3">Ma'lumotlar tekshirilmoqda...</p>
             </div>
             <div id="resultContent">
-                <p class="text-muted text-center italic">Qidiruv natijasi bu yerda ko'rinadi.</p>
+                <p class="text-muted text-center">Natija bu yerda ko'rinadi.</p>
             </div>
         </div>
     </div>
-
     <script>
         async function askAI() {
             const dori = document.getElementById('dori').value;
             if(!dori) return alert("Iltimos, dori nomini yozing!");
-
             document.getElementById('loader').style.display = 'block';
             document.getElementById('resultContent').innerHTML = '';
-
             try {
                 const response = await fetch('/ask', {
                     method: 'POST',
@@ -74,7 +68,7 @@ HTML_TEMPLATE = """
                 document.getElementById('resultContent').innerHTML = '<pre>' + data.result + '</pre>';
             } catch (e) {
                 document.getElementById('loader').style.display = 'none';
-                document.getElementById('resultContent').innerHTML = "Xatolik: Server bilan aloqa uzildi.";
+                document.getElementById('resultContent').innerHTML = "Aloqa xatosi.";
             }
         }
     </script>
@@ -84,36 +78,33 @@ HTML_TEMPLATE = """
 
 @app.route('/')
 def home():
-    return render_template_string(HTML_TEMPLATE)
-    @app.route('/ask', methods=['POST'])
+    return render_template_string(HTML_TEMPLATE)@app.route('/ask', methods=['POST'])
 def ask():
-    data = request.json
-    dori_nomi = data.get('dori')
-    
-    # AI uchun qat'iy va xatosiz ko'rsatma
-    system_instruction = (
-        "Siz tajribali farmatsevt va tibbiy maslahatchisiz. "
-        "Faqat tasdiqlangan va aniq tibbiy ma'lumotlarni taqdim eting. "
-        "Agar dori haqida ma'lumotni aniq bilmasangiz, to'qib chiqarmang va 'Ma'lumot topilmadi' deb javob bering. "
-        "Har doim javobingizning oxirida 'Iltimos, dori qabul qilishdan oldin shifokor bilan maslahatlashing' deb yozing. "
-        "Javobni quyidagi 3 tilda bering:\n\n"
-        "🇺🇿 O'ZBEKCHA:\n(Tarkibi, Qo'llanilishi, Dozasi, Nojo'ya ta'sirlari)\n\n"
-        "🇷🇺 РУССКИЙ:\n(Состав, Применение, Дозировка, Побочные эффекты)\n\n"
-        "🇬🇧 ENGLISH:\n(Ingredients, Usage, Dosage, Side effects)"
-    )
-
     try:
+        data = request.get_json()
+        dori_nomi = data.get('dori')
+        
+        system_instruction = (
+            "Siz malakali farmatsevtsiz. Faqat aniq tibbiy faktlarni bering. "
+            "Agar dori haqida bilmasangiz, 'Ma'lumot topilmadi' deb ayting. "
+            "Oxirida shifokor maslahati shartligini yozing. "
+            "Javobni quyidagi 3 tilda bering:\n\n"
+            "🇺🇿 O'ZBEKCHA: (Tarkibi, Qo'llanilishi, Dozasi, Nojo'ya ta'siri)\n\n"
+            "🇷🇺 РУССКИЙ: (Состав, Применение, Дозировка, Побочные эффекты)\n\n"
+            "🇬🇧 ENGLISH: (Ingredients, Usage, Dosage, Side effects)"
+        )
+
         completion = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="llama-3.1-8b-instant", # Barqaror ishlaydigan model
             messages=[
                 {"role": "system", "content": system_instruction},
-                {"role": "user", "content": f"{dori_nomi} dorisi haqida 3 tilda batafsil ma'lumot ber."}
+                {"role": "user", "content": f"{dori_nomi} haqida 3 tilda ma'lumot ber."}
             ],
-            temperature=0.1 # Faktlar aniq bo'lishi uchun
+            temperature=0.1
         )
         return jsonify({'result': completion.choices[0].message.content})
     except Exception as e:
-        return jsonify({'result': f"Xatolik yuz berdi: {str(e)}"})
+        return jsonify({'result': f"Xatolik: {str(e)}"})
 
-if __name__ == '__main__':
-    app.run(debug=True)
+if name == 'main':
+    app.run(host='0.0.0.0', port=5000)
