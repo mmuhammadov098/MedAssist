@@ -75,7 +75,7 @@ def ask():
     dori_nomi = data.get('dori')
     try:
         completion = client.chat.completions.create(
-            model="llama3-8b-8192",
+            model="llama-3.1-8b-instant",
             messages=[
                 {"role": "system", "content": "Siz malakali farmatsevt shifokorsiz. Dorilar haqida aniq va tushunarli ma'lumot bering."},
                 {"role": "user", "content": f"{dori_nomi} dorisi haqida o'zbek tilida ma'lumot ber."}
