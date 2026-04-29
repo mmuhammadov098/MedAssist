@@ -5,8 +5,8 @@ from groq import Groq
 app = Flask(__name__)
 client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
-# Foydalanuvchi interfeysi (UI)
-HTML_LAYOUT = """
+# Diqqat: Bu yerda bitta qo'shtirnoq ham xato bo'lmasligi kerak
+HTML_CODE = """
 <!DOCTYPE html>
 <html lang="uz">
 <head>
@@ -15,102 +15,74 @@ HTML_LAYOUT = """
     <title>MedAssist Pro AI</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body { background: #f0f2f5; padding: 20px; font-family: 'Segoe UI', sans-serif; }
-        .main-card { max-width: 600px; margin: auto; border-radius: 20px; background: white; box-shadow: 0 10px 40px rgba(0,0,0,0.1); overflow: hidden; }
-        .header { background: #1a73e8; color: white; padding: 20px; text-align: center; }
-        .disclaimer { background: #fff3cd; color: #856404; padding: 12px; font-size: 13px; text-align: center; font-weight: bold; border-bottom: 1px solid #ffeeba; }
-        .content { padding: 25px; }
-        .btn-group-til { display: flex; gap: 10px; margin-bottom: 20px; }
-        .btn-til { flex: 1; font-weight: 600; border-radius: 12px; padding: 12px; }
-        #javob { background: #ffffff; padding: 20px; border-radius: 15px; border: 1px solid #e0e0e0; min-height: 200px; line-height: 1.8; font-size: 16px; white-space: pre-wrap; color: #333; }
-        .loader { display: none; text-align: center; margin: 15px 0; }
-        .footer-note { font-size: 11px; color: #6c757d; margin-top: 15px; text-align: center; }
+        body { background: #f8f9fa; padding: 20px; font-family: sans-serif; }
+        .card { max-width: 600px; margin: auto; border-radius: 15px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .header { background: #0d6efd; color: white; padding: 20px; text-align: center; }
+        .alert-top { background: #fff3cd; color: #856404; padding: 10px; font-size: 12px; text-align: center; font-weight: bold; }
+        .p-4 { padding: 1.5rem; }
+        .btn-lang { width: 30%; font-weight: bold; }
+        #res { background: white; border: 1px solid #ddd; padding: 15px; border-radius: 10px; margin-top: 20px; min-height: 100px; white-space: pre-wrap; }
     </style>
 </head>
 <body>
-    <div class="main-card">
-        <div class="disclaimer">⚠️ SHIFOKOR MASLAHATI SHART! AI ADASHISHI MUMKIN.</div>
+    <div class="card">
+        <div class="alert-top">⚠️ OGOHLANTIRISH: SHIFOKOR MASLAHATI SHART!</div>
         <div class="header"><h3>💊 MedAssist Pro AI</h3></div>
-        <div class="content">
-            <label class="form-label fw-bold">Dori nomini kiriting:</label>
-            <input type="text" id="dori" class="form-control form-control-lg mb-3 shadow-sm" placeholder="Masalan: Analgin, Aspirin...">
-            
-            <p class="text-center small text-muted mb-2">Javob tilini tanlang:</p>
-            <div class="btn-group-til">
-                <button onclick="askAI('uzbekcha')" class="btn btn-primary btn-til shadow-sm">O'zbekcha</button>
-                <button onclick="askAI('ruscha')" class="btn btn-info text-white btn-til shadow-sm">Русский</button>
-                <button onclick="askAI('inglizcha')" class="btn btn-dark btn-til shadow-sm">English</button>
+        <div class="p-4 bg-white">
+            <input type="text" id="d" class="form-control mb-3" placeholder="Dori nomini yozing...">
+            <div class="d-flex justify-content-between mb-3">
+                <button onclick="send('uzbekcha')" class="btn btn-outline-primary btn-lang">O'zbek</button>
+                <button onclick="send('ruscha')" class="btn btn-outline-info btn-lang">Русский</button>
+                <button onclick="send('inglizcha')" class="btn btn-outline-dark btn-lang">English</button>
             </div>
-
-            <div class="loader" id="loader">
-                <div class="spinner-border text-primary" role="status"></div>
-                <p class="mt-2 fw-bold">Tahlil qilinmoqda...</p>
-            </div>
-            
-            <div id="javob">Dori haqida ma'lumot olish uchun til tugmasini bosing.</div>
-            <div class="footer-note">© 2026 MedAssist Pro - Professional Tibbiy Ma'lumotnoma</div>
+            <div id="res">Ma'lumot uchun tilni tanlang.</div>
         </div>
     </div>
-
     <script>
-        async function askAI(til) {
-            const dori = document.getElementById('dori').value;
-            if(!dori) { alert("Iltimos, dori nomini yozing!"); return; }
-
-            document.getElementById('loader').style.display = 'block';
-            document.getElementById('javob').style.opacity = '0.5';
-
+        async function send(l) {
+            const d = document.getElementById('d').value;
+            if(!d) return alert("Dori nomini yozing!");
+            document.getElementById('res').innerText = "Qidirilmoqda...";
             try {
                 const r = await fetch('/ask', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({dori: dori, til: til})
+                    body: JSON.stringify({dori: d, til: l})
                 });
-                const data = await r.json();
-                document.getElementById('loader').style.display = 'none';
-                document.getElementById('javob').style.opacity = '1';
-                document.getElementById('javob').innerText = data.result;
+                const resData = await r.json();
+                document.getElementById('res').innerText = resData.result;
             } catch (e) {
-                document.getElementById('loader').style.display = 'none';
-                document.getElementById('javob').innerText = "Xatolik yuz berdi. Internetni tekshiring.";
+                document.getElementById('res').innerText = "Xatolik yuz berdi.";
             }
         }
     </script>
 </body>
 </html>
-"""@app.route('/')
-def home():
-    return render_template_string(HTML_LAYOUT)
+"""
+
+@app.route('/')
+def index():
+    return render_template_string(HTML_CODE)
 
 @app.route('/ask', methods=['POST'])
-def ask():
+def ask_ai():
     try:
         data = request.json
         dori = data.get('dori')
         til = data.get('til')
         
-        # AIga o'ta qat'iy ko'rsatma (Zero-Hallucination)
-        system_prompt = (
-            f"Siz professional farmatsevt va shifokorsiz. "
-            f"Javobni FAQAT {til} tilida bering. "
-            "Dori haqida quyidagi tartibda ma'lumot bering:\n"
-            "1. Tarkibi va xalqaro nomi.\n"
-            "2. Asosiy qo'llanilishi.\n"
-            "3. Tavsiya etiladigan dozasi.\n"
-            "4. Nojo'ya ta'sirlari.\n"
-            "MUHIM: Agar ma'lumot aniq bo'lmasa, to'qib chiqarmang. "
-            "Har doim javob oxirida 'Bu ma'lumotlar tanishish uchun, shifokor bilan maslahatlashing' deb yozing."
-        )
+        # AI uchun qat'iy ko'rsatma
+        msg = f"Siz professional farmatsevtsiz. {dori} haqida tarkibi, dozasi va foydasi haqida FAQAT {til}da javob bering. To'qib chiqarmang. Oxirida shifokor maslahati kerakligini ayting."
 
-        completion = client.chat.completions.create(
+        chat = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
-            messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": dori}],
+            messages=[{"role": "user", "content": msg}],
             temperature=0.0
         )
-        return jsonify({'result': completion.choices[0].message.content})
+        return jsonify({'result': chat.choices[0].message.content})
     except Exception as e:
-        return jsonify({'result': f"Server xatosi: {str(e)}"}), 500
+        return jsonify({'result': f"Xatolik: {str(e)}"}), 500
 
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host='0.0.0.0', port=port)
+    # Render uchun to'g'ri port sozlamasi
+    app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
