@@ -1,59 +1,79 @@
 import os
 from flask import Flask, request, jsonify, render_template_string
-from groq import Groq
 
 app = Flask(__name__)
-client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
-# Diqqat: Bu yerda bitta qo'shtirnoq ham xato bo'lmasligi kerak
+# Dori vositalari bazasi (Mustaqil baza)
+MED_DATABASE = {
+    "yodamarin": {
+        "uz": "Yodamarin - yod tanqisligini oldini olish uchun dori. Tarkibi: Kaliy yodid.",
+        "ru": "Йодомарин - препарат для профилактики дефицита йода. Состав: Калия йодид.",
+        "en": "Yodamarin - a drug for the prevention of iodine deficiency. Composition: Potassium iodide."
+    },
+    "analgin": {
+        "uz": "Analgin - og'riq qoldiruvchi va isitma tushiruvchi dori. Tarkibi: Metamizol natriy.",
+        "ru": "Анальгин - анальгезирующее ненаркотическое средство. Состав: Метамизол натрия.",
+        "en": "Analgin - an analgesic and antipyretic drug. Composition: Metamizole sodium."
+    }
+}
+
+# HTML Kod - Logotip va chiroyli interfeys bilan
 HTML_CODE = """
 <!DOCTYPE html>
 <html lang="uz">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MedAssist Pro AI</title>
+    <title>MedAssist Pro</title>
+    
+    <link rel="icon" href="https://img.icons8.com/color/96/pill.png" type="image/png">
+    <link rel="apple-touch-icon" href="https://img.icons8.com/color/192/pill.png">
+    
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body { background: #f8f9fa; padding: 20px; font-family: sans-serif; }
-        .card { max-width: 600px; margin: auto; border-radius: 15px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        .header { background: #0d6efd; color: white; padding: 20px; text-align: center; }
-        .alert-top { background: #fff3cd; color: #856404; padding: 10px; font-size: 12px; text-align: center; font-weight: bold; }
-        .p-4 { padding: 1.5rem; }
-        .btn-lang { width: 30%; font-weight: bold; }
-        #res { background: white; border: 1px solid #ddd; padding: 15px; border-radius: 10px; margin-top: 20px; min-height: 100px; white-space: pre-wrap; }
+        body { background: #f4f7f6; padding: 20px; font-family: 'Segoe UI', sans-serif; }
+        .card { max-width: 550px; margin: auto; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); border: none; overflow: hidden; }
+        .header { background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%); color: white; padding: 25px; text-align: center; }
+        .btn-lang { width: 32%; font-weight: bold; border-radius: 12px; padding: 12px; }
+        #result { background: white; border: 1px solid #eee; padding: 20px; border-radius: 15px; min-height: 150px; margin-top: 20px; line-height: 1.8; color: #333; font-size: 16px; }
+        .disclaimer { font-size: 12px; color: #d93025; text-align: center; margin-top: 15px; font-weight: bold; background: #fbe9e7; padding: 10px; border-radius: 10px; }
     </style>
 </head>
 <body>
     <div class="card">
-        <div class="alert-top">⚠️ OGOHLANTIRISH: SHIFOKOR MASLAHATI SHART!</div>
-        <div class="header"><h3>💊 MedAssist Pro AI</h3></div>
+        <div class="header">
+            <img src="https://img.icons8.com/color/96/pill.png" width="50" height="50" alt="Logo" class="mb-2">
+            <h3>MedAssist Pro</h3>
+            <p class="mb-0 small">Professional Tibbiy Ma'lumotnoma</p>
+        </div>
         <div class="p-4 bg-white">
-            <input type="text" id="d" class="form-control mb-3" placeholder="Dori nomini yozing...">
+            <input type="text" id="drugInput" class="form-control form-control-lg mb-3 shadow-sm" placeholder="Dori nomini yozing...">
             <div class="d-flex justify-content-between mb-3">
-                <button onclick="send('uzbekcha')" class="btn btn-outline-primary btn-lang">O'zbek</button>
-                <button onclick="send('ruscha')" class="btn btn-outline-info btn-lang">Русский</button>
-                <button onclick="send('inglizcha')" class="btn btn-outline-dark btn-lang">English</button>
+                <button onclick="getInfo('uz')" class="btn btn-primary btn-lang">O'zbek</button>
+                <button onclick="getInfo('ru')" class="btn btn-info text-white btn-lang">Русский</button>
+                <button onclick="getInfo('en')" class="btn btn-dark btn-lang">English</button>
             </div>
-            <div id="res">Ma'lumot uchun tilni tanlang.</div>
+            <div id="result">Natija bu yerda chiqadi.</div>
+            <p class="disclaimer">⚠️ DIQQAT: SHIFOKOR BILAN MASLAHATLASHING!</p>
         </div>
     </div>
     <script>
-        async function send(l) {
-            const d = document.getElementById('d').value;
-            if(!d) return alert("Dori nomini yozing!");
-            document.getElementById('res').innerText = "Qidirilmoqda...";
-            try {
-                const r = await fetch('/ask', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({dori: d, til: l})
-                });
-                const resData = await r.json();
-                document.getElementById('res').innerText = resData.result;
-            } catch (e) {
-                document.getElementById('res').innerText = "Xatolik yuz berdi.";
-            }
+        function getInfo(lang) {
+            const drug = document.getElementById('drugInput').value.toLowerCase().trim();
+            if(!drug) { alert("Iltimos, dori nomini yozing!"); return; }
+            
+            fetch('/get_data', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({name: drug, lang: lang})
+            })
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('result').innerText = data.text;
+            })
+            .catch(err => {
+                document.getElementById('result').innerText = "Tarmoq xatosi.";
+            });
         }
     </script>
 </body>
@@ -62,27 +82,24 @@ HTML_CODE = """
 
 @app.route('/')
 def index():
-    return render_template_string(HTML_CODE)
-
-@app.route('/ask', methods=['POST'])
-def ask_ai():
-    try:
-        data = request.json
-        dori = data.get('dori')
-        til = data.get('til')
-        
-        # AI uchun qat'iy ko'rsatma
-        msg = f"Siz professional farmatsevtsiz. {dori} haqida tarkibi, dozasi va foydasi haqida FAQAT {til}da javob bering. To'qib chiqarmang. Oxirida shifokor maslahati kerakligini ayting."
-
-        chat = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=[{"role": "user", "content": msg}],
-            temperature=0.0
-        )
-        return jsonify({'result': chat.choices[0].message.content})
-    except Exception as e:
-        return jsonify({'result': f"Xatolik: {str(e)}"}), 500
+    return render_template_string(HTML_CODE)@app.route('/get_data', methods=['POST'])
+def get_data():
+    data = request.json
+    name = data.get('name')
+    lang = data.get('lang')
+    
+    # Baza dan qidirish
+    drug_info = MED_DATABASE.get(name)
+    if drug_info:
+        return jsonify({"text": drug_info.get(lang)})
+    else:
+        # Topilmasa javob
+        messages = {
+            'uz': "Kechirasiz, bu dori bazada topilmadi.",
+            'ru': "Извините, этот препарат не найден.",
+            'en': "Sorry, this drug was not found."
+        }
+        return jsonify({"text": messages.get(lang, "Not found.")})
 
 if __name__ == '__main__':
-    # Render uchun to'g'ri port sozlamasi
     app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
