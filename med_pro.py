@@ -393,7 +393,7 @@ Javobni FAQAT quyidagi JSON formatda ber, boshqa hech narsa yozma:
   "dozasi": "Necha mg, kuniga necha marta, necha kun ichiladi — batafsil yoz",
   "foydasi": "Dori qanday kasalliklarda qo'llaniladi, 2-3 jumla",
   "zarari": "Yon ta'sirlar va ehtiyot choralar, 2-3 jumla"
-client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+}}"""client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
         message = client.messages.create(
             model="claude-haiku-4-5-20251001",
             max_tokens=800,
@@ -406,7 +406,7 @@ client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
         # JSON parse qilish
         import json, re
         # JSON blokni topish
-       match = re.search(r"\{.*\}", raw, re.DOTALL)
+        match = re.search(r'\{[\s\S]*\}', raw)
         if not match:
             raise ValueError("JSON topilmadi")
 
