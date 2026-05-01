@@ -406,7 +406,7 @@ client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
         # JSON parse qilish
         import json, re
         # JSON blokni topish
-        match = re.search(r'\{[\s\S]*\}', raw)
+        match = re.search(r"\{[\s\S]*?\}", raw)
         if not match:
             raise ValueError("JSON topilmadi")
 
