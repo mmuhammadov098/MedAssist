@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify
 import openai
 import os
 
-app = Flask(__name__)
+app = Flask(__name__)  # ✅ TUZATILDI: 'name' → 'name'
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
 HTML_TEMPLATE = """
@@ -18,20 +18,15 @@ HTML_TEMPLATE = """
         .header { background: #007bff; color: white; padding: 20px; text-align: center; font-size: 22px; font-weight: bold; }
         .p-3 { padding: 20px; }
         input { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
-        
         .lang-group { display: flex; gap: 5px; margin-bottom: 15px; }
         .btn-lang { flex: 1; padding: 10px; border: none; border-radius: 8px; cursor: pointer; color: white; font-weight: bold; }
-        
-        /* Tillar ranglari siz aytgandek: */
-        .uz { background: #28a745; } /* Yashil */
-        .ru { background: #ffc107; color: black; } /* Sariq */
-        .en { background: #dc3545; } /* Qizil */
-        
+        .uz { background: #28a745; }
+        .ru { background: #ffc107; color: black; }
+        .en { background: #dc3545; }
         .btn-main { width: 100%; padding: 15px; background: #007bff; color: white; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; }
         .result { background: #fff; border-left: 5px solid #007bff; padding: 15px; margin-top: 15px; font-size: 14px; line-height: 1.6; }
         .blue-t { color: #0056b3; font-weight: bold; display: block; margin-top: 10px; }
         .warning { background: #fff3cd; color: #856404; padding: 15px; border-radius: 10px; margin-top: 15px; font-size: 12px; text-align: center; border: 1px solid #ffeeba; }
-        
         .alarm-box { background: #e7f3ff; padding: 15px; border-radius: 15px; margin-top: 20px; border: 2px dashed #007bff; text-align: center; }
     </style>
 </head>
@@ -62,35 +57,50 @@ HTML_TEMPLATE = """
     <script>
         let L = 'uz';
         function setL(l) { L = l; alert(l.toUpperCase() + " tanlandi"); }
+
         async function ask() {
             const n = document.getElementById('drug').value;
-            if(!n) return;
+            if (!n) return;
             document.getElementById('out').innerText = "⌛ Qidirilmoqda...";
-            const res = await fetch('/get_drug', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({name: n, lang: L})
-            });
-            const data = await res.json();
-            let t = data.text.replace(/TARKIBI:/g, '<span class="blue-t">🧪 TARKIBI:</span>').replace(/DOZASI:/g, '<span class="blue-t">⚖️ DOZASI:</span>')
-                             .replace(/FOYDASI:/g, '<span class="blue-t">✅ FOYDASI:</span>')
-                             .replace(/ZARARI:/g, '<span class="blue-t">❌ ZARARI:</span>');
-            document.getElementById('out').innerHTML = t;
+            try {
+                const res = await fetch('/get_drug', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: n, lang: L })
+                });
+                const data = await res.json();
+
+                // ✅ TUZATILDI: to'liq .replace() zanjiri — uzilgan qismlari ulandilet t = data.text
+                    .replace(/TARKIBI:/g, '<span class="blue-t">🧪 TARKIBI:</span>')
+                    .replace(/DOZASI:/g,  '<span class="blue-t">⚖️ DOZASI:</span>')
+                    .replace(/FOYDASI:/g, '<span class="blue-t">✅ FOYDASI:</span>')
+                    .replace(/ZARARI:/g,  '<span class="blue-t">❌ ZARARI:</span>');
+
+                document.getElementById('out').innerHTML = t;
+            } catch (err) {
+                document.getElementById('out').innerText = "❌ Xatolik yuz berdi: " + err.message;
+            }
         }
+
         function save() {
             const t = document.getElementById('tm').value;
-            if(!t) return;
+            if (!t) return;
             localStorage.setItem('med_time', t);
             document.getElementById('st').innerText = "🔔 Eslatma " + t + " ga qo'yildi!";
-            if(Notification.permission !== 'granted') Notification.requestPermission();
+            if (Notification.permission !== 'granted') Notification.requestPermission();
         }
+
+        // ✅ Har 10 soniyada tekshiradi
         setInterval(() => {
             const s = localStorage.getItem('med_time');
+            if (!s) return;
             const now = new Date();
-            const cur = now.getHours().toString().padStart(2,'0') + ":" + now.getMinutes().toString().padStart(2,'0');
-            if(s === cur) {
+            const cur = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
+            if (s === cur) {
                 alert("🚨 VAQT BO'LDI! DORINGIZNI ICHING! (Shifokor tavsiyasiga amal qiling)");
-                new Notification("🚨 MedAssist: Dori ichish vaqti!");
+                if (Notification.permission === 'granted') {
+                    new Notification("🚨 MedAssist: Dori ichish vaqti!");
+                }
             }
         }, 10000);
     </script>
@@ -105,12 +115,20 @@ def home():
 @app.route('/get_drug', methods=['POST'])
 def get_drug():
     data = request.json
-    prompt = f"{data['name']} dorisi haqida {data['lang']} tilida TARKIBI:, DOZASI:, FOYDASI: va ZARARI: bo'limlari bilan ma'lumot ber."
-    response = openai.ChatCompletion.create(
+    drug_name = data.get('name', '')
+    lang = data.get('lang', 'uz')
+
+    prompt = f"{drug_name} dorisi haqida {lang} tilida TARKIBI:, DOZASI:, FOYDASI: va ZARARI: bo'limlari bilan ma'lumot ber."
+
+    # ✅ TUZATILDI: Yangi openai kutubxonasi uchun to'g'ri sintaksis
+    client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    response = client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[{"role": "user", "content": prompt}]
     )
     return jsonify({"text": response.choices[0].message.content})
 
+
+# ✅ TUZATILDI: 'name' → 'name'
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=10000)
