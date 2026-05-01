@@ -9,7 +9,7 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[logging.StreamHandler()]
 )
-logger = logging.getLogger(name)
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
