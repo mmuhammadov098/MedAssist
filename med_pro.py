@@ -332,7 +332,7 @@ def get_drug():
             + 'Javobni faqat JSON formatda ber, boshqa hech narsa yozma. '
             + 'JSON tuzilishi: '
             + '{"tarkibi": "...", "dozasi": "...", "foydasi": "...", "zarari": "..."}'
-        )client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+      client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
         message = client.messages.create(
             model="claude-haiku-4-5",
             max_tokens=800,
