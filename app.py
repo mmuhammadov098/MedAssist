@@ -210,11 +210,12 @@ def search():
         logger.info("Qidirish: %s | til: %s", drug_name, lang)
 
         prompt = (
-            'Sen tibbiy yordamchisan. '
-            + '"' + drug_name + '"'
-            + ' dorisi haqida ' + lang_name + ' tilida malumot ber. Agar bu dori mavjud bolsa tolik malumot ber. Agar bunday dori mavjud bolmasa faqat {"tarkibi":"Bunday dori topilmadi","dozasi":"","foydasi":"","zarari":"","holati":""} qaytargil. Barcha javoblarni faqat ' + lang_name + ' tilida yoz. '
-            + 'Javobni faqat JSON formatda ber, boshqa hech narsa yozma. '
-            + 'Format: {"tarkibi":"...","dozasi":"necha mg, kuniga necha marta, necha kun","foydasi":"...","zarari":"...","holati":"tabletka yoki kapsul yoki suyuqlik"} MUHIM: Faqat aniq tibbiy malumot ber, noto\'g\'ri malumot berma!'
+            'You are a professional medical assistant. '
+            + 'Give detailed information about "' + drug_name + '" medicine in ' + lang_name + ' language. '
+            + 'If this medicine does not exist, return: {"tarkibi":"Bunday dori topilmadi","dozasi":"","foydasi":"","zarari":"","holati":""}. '
+            + 'If it exists, give DETAILED information. Do NOT write medicine name in tarkibi field, write only chemical composition. '
+            + 'Return ONLY this JSON format, nothing else, no extra text: '
+            + '{"tarkibi":"kimyoviy tarkibi batafsil","dozasi":"necha mg, kuniga necha marta, necha kun, qanday qabul qilinadi","foydasi":"qanday kasalliklarni davolaydi batafsil royxat","zarari":"yon tasirlar batafsil royxat","holati":"tabletka yoki kapsul yoki suyuqlik"}'
         )
 
         client = Groq(api_key=os.getenv("GROQ_API_KEY"))
