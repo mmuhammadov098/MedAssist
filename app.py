@@ -129,6 +129,7 @@ HTML_PAGE = (
     "if(d.dozasi)h+='<div class=\\'section-card dozasi\\'><div class=\\'section-title\\'>Dozasi va Qollanilishi</div><div class=\\'section-body\\'>'+d.dozasi+'</div></div>';"
     "if(d.foydasi)h+='<div class=\\'section-card foydasi\\'><div class=\\'section-title\\'>Foydasi</div><div class=\\'section-body\\'>'+d.foydasi+'</div></div>';"
     "if(d.zarari)h+='<div class=\\'section-card zarari\\'><div class=\\'section-title\\'>Zarari</div><div class=\\'section-body\\'>'+d.zarari+'</div></div>';"
+    "if(d.holati)h+='<div class=\\'section-card tarkibi\\'><div class=\\'section-title\\'>Holati</div><div class=\\'section-body\\'>'+d.holati+'</div></div>';"
     "if(!h)h='<div class=\\'placeholder\\'>Malumot topilmadi</div>';"
     "box.innerHTML=h;"
     "})"
@@ -213,7 +214,7 @@ def search():
             + '"' + drug_name + '"'
             + ' dorisi haqida ' + lang_name + ' tilida malumot ber. '
             + 'Javobni faqat JSON formatda ber, boshqa hech narsa yozma. '
-            + 'Format: {"tarkibi":"...","dozasi":"...","foydasi":"...","zarari":"..."}'
+            + 'Format: {"tarkibi":"...","dozasi":"...","foydasi":"...","zarari":"...","holati":"..."}'
         )
 
         client = Groq(api_key=os.getenv("GROQ_API_KEY"))
