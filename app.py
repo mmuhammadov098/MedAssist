@@ -212,7 +212,7 @@ def search():
         prompt = (
             'Sen tibbiy yordamchisan. '
             + '"' + drug_name + '"'
-            + ' dorisi haqida ' + lang_name + ' tilida malumot ber. '
+            + ' dorisi haqida ' + lang_name + ' tilida malumot ber. Agar bunday dori mavjud bolmasa, {"xato": "Bunday dori topilmadi"} deb qaytarma, balki {"tarkibi":"topilmadi","dozasi":"topilmadi","foydasi":"topilmadi","zarari":"topilmadi","holati":"topilmadi"} qaytargil. Faqat ' + lang_name + ' tilida yoz, boshqa tilda yozma. '
             + 'Javobni faqat JSON formatda ber, boshqa hech narsa yozma. '
             + 'Format: {"tarkibi":"...","dozasi":"necha mg, kuniga necha marta, necha kun","foydasi":"...","zarari":"...","holati":"tabletka yoki kapsul yoki suyuqlik"} MUHIM: Faqat aniq tibbiy malumot ber, noto\'g\'ri malumot berma!'
         )
