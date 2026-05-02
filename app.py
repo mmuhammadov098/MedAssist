@@ -17,6 +17,8 @@ HTML_PAGE = (
     "<meta name='viewport' content='width=device-width, initial-scale=1.0'>"
     "<title>MedAssist Pro</title>"
     "<link href='https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&display=swap' rel='stylesheet'>"
+    "<link rel='manifest' href='/manifest.json'>"
+"<link rel='apple-touch-icon' href='https://raw.githubusercontent.com/mmuhammadov098/MedAssist/main/logo.jpg'>"
     "<style>"
     ":root{--blue:#0062cc;--blue2:#00b4d8;--green:#059669;--red:#dc2626;--yellow:#d97706;--bg:#eef6ff;--card:#fff;--text:#1e293b;--muted:#64748b;--border:#e2e8f0}"
     "*{box-sizing:border-box;margin:0;padding:0}"
