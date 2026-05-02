@@ -2,7 +2,7 @@ import logging
 import json
 import os
 from flask import Flask, request, jsonify
-import anthropic
+from groq import Groq
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', handlers=[logging.StreamHandler()])
 logger = logging.getLogger(__name__)
@@ -212,18 +212,19 @@ def search():
             'Sen tibbiy yordamchisan. '
             + '"' + drug_name + '"'
             + ' dorisi haqida ' + lang_name + ' tilida malumot ber. '
-            + 'Javobni faqat JSON formatda ber. '
+            + 'Javobni faqat JSON formatda ber, boshqa hech narsa yozma. '
             + 'Format: {"tarkibi":"...","dozasi":"...","foydasi":"...","zarari":"..."}'
         )
 
-        client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
-        message = client.messages.create(
-            model="claude-haiku-4-5",
+        client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+        response = client.chat.completions.create(
+            model="llama3-8b-8192",
+            messages=[{"role": "user", "content": prompt}],
             max_tokens=800,
-            messages=[{"role": "user", "content": prompt}]
+            temperature=0.3
         )
 
-        raw = message.content[0].text.strip()
+        raw = response.choices[0].message.content.strip()
         logger.info("Javob: %s", raw)
 
         start = raw.find('{')
@@ -238,12 +239,6 @@ def search():
         logger.info("Muvaffaqiyat: %s", drug_name)
         return jsonify(result)
 
-    except anthropic.AuthenticationError:
-        logger.error("API kalit notogri!")
-        return jsonify({"error": "API kalit notogri"}), 401
-    except anthropic.RateLimitError:
-        logger.error("API limit tugadi")
-        return jsonify({"error": "API limiti tugadi"}), 429
     except Exception as e:
         logger.error("Xato: %s", str(e))
         return jsonify({"error": str(e)}), 500
