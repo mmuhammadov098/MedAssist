@@ -82,7 +82,9 @@ HTML_PAGE = (
     "</head>"
     "<body>"
     "<div class='card'>"
-   "<div class='header'><img src='https://raw.githubusercontent.com/mmuhammadov098/MedAssist/main/logo.jpg' style='width:80px;height:80px;border-radius:16px;margin-bottom:10px;'><h1>MedAssist Pro</h1><p>AI yordamida dori malumotlari - 3 tilda</p></div>"
+  "<link rel='manifest' href='/manifest.json'>"
+"<link rel='apple-touch-icon' href='https://raw.githubusercontent.com/mmuhammadov098/MedAssist/main/logo.jpg'>"
+    "<div class='header'><img src='https://raw.githubusercontent.com/mmuhammadov098/MedAssist/main/logo.jpg' style='width:80px;height:80px;border-radius:16px;margin-bottom:10px;'><h1>MedAssist Pro</h1><p>AI yordamida dori malumotlari - 3 tilda</p></div>"
     "<div class='body'>"
     "<div class='search-row'>"
     "<input type='text' id='drug-input' placeholder='Dori nomi... (masalan: Paracetamol)'>"
@@ -210,12 +212,11 @@ def search():
         logger.info("Qidirish: %s | til: %s", drug_name, lang)
 
         prompt = (
-            'You are a professional medical assistant. '
-            + 'Give detailed information about "' + drug_name + '" medicine in ' + lang_name + ' language. '
-            + 'If this medicine does not exist, return: {"tarkibi":"Bunday dori topilmadi","dozasi":"","foydasi":"","zarari":"","holati":""}. '
-            + 'If it exists, give DETAILED information. Do NOT write medicine name in tarkibi field, write only chemical composition. '
-            + 'Return ONLY this JSON format, nothing else, no extra text: '
-            + '{"tarkibi":"kimyoviy tarkibi batafsil","dozasi":"necha mg, kuniga necha marta, necha kun, qanday qabul qilinadi","foydasi":"qanday kasalliklarni davolaydi batafsil royxat","zarari":"yon tasirlar batafsil royxat","holati":"tabletka yoki kapsul yoki suyuqlik"}'
+            'You are a professional pharmacist. '
+            + 'Give accurate information about "' + drug_name + '" medicine in ' + lang_name + ' language. '
+            + 'Return ONLY valid JSON, no extra text: '
+            + '{"tarkibi":"Asosiy modda: [faqat asosiy kimyoviy modda]. Yordamchi moddalar: [asosiy yordamchi moddalar]","dozasi":"[aniq doza, qabul qilish tartibi]","foydasi":"[kasalliklar royxati]","zarari":"[yon tasirlar royxati]","holati":"[tabletka/kapsul/suyuqlik]"}'
+            + ' If medicine does not exist return: {"tarkibi":"Bunday dori topilmadi","dozasi":"","foydasi":"","zarari":"","holati":""}'
         )
 
         client = Groq(api_key=os.getenv("GROQ_API_KEY"))
@@ -246,6 +247,17 @@ def search():
         return jsonify({"error": str(e)}), 500
 
 
-if __name__ == '__main__':
+
+@app.route('/manifest.json')
+def manifest():
+    return jsonify({
+        "name": "MedAssist Pro",
+        "short_name": "MedAssist",
+        "start_url": "/",
+        "display": "standalone",
+        "background_color": "#0062cc",
+        "theme_color": "#0062cc",
+        "icons": [{"src": "https://raw.githubusercontent.com/mmuhammadov098/MedAssist/main/logo.jpg", "sizes": "192x192", "type": "image/jpeg"}]
+    })if __name__ == '__main__':
     logger.info("MedAssist Pro ishga tushdi")
     app.run(host='0.0.0.0', port=10000, debug=False)
