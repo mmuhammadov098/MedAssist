@@ -325,16 +325,18 @@ def get_drug():
 
         logger.info("Qidirish: %s | til: %s", drug_name, lang)
 
-        prompt = (
+       prompt = (
             'Siz tibbiy yordamchisiz. '
-            + '"' + drug_name + '"'
-            + ' dorisi haqida ' + lang_name + ' tilida malumot ber. '
+            + '"' + drug_name + '" '
+            + 'dorisi haqida ' + lang_name + ' tilida malumot ber. '
             + 'Javobni faqat JSON formatda ber, boshqa hech narsa yozma. '
             + 'JSON tuzilishi: '
             + '{"tarkibi": "...", "dozasi": "...", "foydasi": "...", "zarari": "..."}'
-      client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+        ) # Mana bu yerda qavs yopilishi shart edi
+
+        client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
         message = client.messages.create(
-            model="claude-haiku-4-5",
+            model="claude-3-haiku-20240307", # Model nomini ham to'g'irlab qo'ydim
             max_tokens=800,
             messages=[{"role": "user", "content": prompt}]
         )
