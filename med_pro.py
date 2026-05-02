@@ -325,7 +325,7 @@ def get_drug():
 
         logger.info("Qidirish: %s | til: %s", drug_name, lang)
 
-       prompt = (
+        prompt = (
             'Siz tibbiy yordamchisiz. '
             + '"' + drug_name + '" '
             + 'dorisi haqida ' + lang_name + ' tilida malumot ber. '
