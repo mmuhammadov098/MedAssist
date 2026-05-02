@@ -82,7 +82,7 @@ HTML_PAGE = (
     "</head>"
     "<body>"
     "<div class='card'>"
-    "<div class='header'><h1>MedAssist Pro</h1><p>AI yordamida dori malumotlari - 3 tilda</p></div>"
+   "<div class='header'><img src='https://raw.githubusercontent.com/mmuhammadov098/MedAssist/main/logo.jpg' style='width:80px;height:80px;border-radius:16px;margin-bottom:10px;'><h1>MedAssist Pro</h1><p>AI yordamida dori malumotlari - 3 tilda</p></div>"
     "<div class='body'>"
     "<div class='search-row'>"
     "<input type='text' id='drug-input' placeholder='Dori nomi... (masalan: Paracetamol)'>"
@@ -214,7 +214,7 @@ def search():
             + '"' + drug_name + '"'
             + ' dorisi haqida ' + lang_name + ' tilida malumot ber. '
             + 'Javobni faqat JSON formatda ber, boshqa hech narsa yozma. '
-            + 'Format: {"tarkibi":"...","dozasi":"...","foydasi":"...","zarari":"...","holati":"..."}'
+            + 'Format: {"tarkibi":"...","dozasi":"necha mg, kuniga necha marta, necha kun","foydasi":"...","zarari":"...","holati":"tabletka yoki kapsul yoki suyuqlik"} MUHIM: Faqat aniq tibbiy malumot ber, noto\'g\'ri malumot berma!'
         )
 
         client = Groq(api_key=os.getenv("GROQ_API_KEY"))
