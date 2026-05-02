@@ -257,7 +257,9 @@ def manifest():
         "display": "standalone",
         "background_color": "#0062cc",
         "theme_color": "#0062cc",
-        "icons": [{"src": "https://raw.githubusercontent.com/mmuhammadov098/MedAssist/main/logo.jpg", "sizes": "192x192", "type": "image/jpeg"}]
-    if __name__ == '__main__':
+        "icons": [{"src": "https://raw.githubusercontent.com/mmuhammadov098/MedAssist/main/logo.jpg", "sizes": "512x512", "type": "image/jpeg"}]
+    })
+
+if __name__ == '__main__':
     logger.info("MedAssist Pro ishga tushdi")
     app.run(host='0.0.0.0', port=10000, debug=False)
